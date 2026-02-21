@@ -90,9 +90,9 @@ local Library do
 			Direction = Enum.EasingDirection.Out
 		},
 		Folders = {
-			Directory = "Folders",
-			Configs = "Folders/Configs",
-			Assets = "Folders/Assets"
+			Directory = "scriptname",
+			Configs = "scriptname/Configs",
+			Assets = "scriptname/Assets"
 		},
 		Images = {
 			["Saturation"] = {"Saturation.png", "https://github.com/sametexe001/images/blob/main/saturation.png?raw=true" },
@@ -620,23 +620,23 @@ local Library do
 		end
 	end
 	Library.DeleteConfig = function(self, Config)
-		if isfile(Workspace.Folders.Configs .. "/" .. Config) then 
-			delfile(Workspace.Folders.Configs .. "/" .. Config)
+		if isfile(Library.Folders.Configs .. "/" .. Config) then 
+			delfile(Library.Folders.Configs .. "/" .. Config)
 			Library:Notification("Deleted config " .. Config .. ".json", 5, Color3.fromRGB(0, 255, 0))
 		end
 	end
 	Library.SaveConfig = function(self, Config)
-		if isfile(Workspace.Folders.Configs .. "/" .. Workspace.Folders.Configs .. "/" .. Config .. ".json") then
-			writefile(Library.Folders.Directory .. "/" .. Workspace.Folders.Configs .. "/" .. Config .. ".json", Workspace:GetConfig())
+		if isfile(Library.Folders.Directory .. "/" .. Library.Folders.Configs .. "/" .. Config .. ".json") then
+			writefile(Library.Folders.Directory .. "/" .. Library.Folders.Configs .. "/" .. Config .. ".json", Library:GetConfig())
 			Library:Notification("Saved config " .. Config .. ".json", 5, Color3.fromRGB(0, 255, 0))
 		end
 	end
 	Library.RefreshConfigsList = function(self, Element)
 		local CurrentList = { }
 		local List = { }
-		local ConfigFolderName = StringGSub(Workspace.Folders.Configs, Workspace.Folders.Configs .. "/", "")
-		for Index, Value in listfiles(Workspace.Folders.Configs) do
-			local FileName = StringGSub(Value, Workspace.Folders.Configs .. "\\" .. ConfigFolderName .. "\\", "")
+		local ConfigFolderName = StringGSub(Library.Folders.Configs, Library.Folders.Directory .. "/", "")
+		for Index, Value in listfiles(Library.Folders.Configs) do
+			local FileName = StringGSub(Value, Library.Folders.Directory .. "\\" .. ConfigFolderName .. "\\", "")
 			List[Index] = FileName
 		end
 		local IsNew = #List ~= CurrentList
@@ -5790,7 +5790,7 @@ do
 				label.Name = "FOVLabel"
 				label.Parent = label_gui
 				label.BackgroundTransparency = 1
-				label.Text = "Botrixa"
+				label.Text = "Stranded . lol"
 				label.TextColor3 = Stranded.fov.options.label.color
 				label.TextStrokeTransparency = 0
 				label.TextStrokeColor3 = Stranded.fov.options.label.outline_color
@@ -11932,7 +11932,7 @@ esp.funcs.setup_silent_aim_hook()
 esp.funcs.setup_triggerbot()
 esp.funcs.setup_gun_mods()
 
-local Window = Library:Window({Name = "Botrixa . cc", Size = UDim2.new(0, 675, 0, 650), FadeSpeed = 0.25})
+local Window = Library:Window({Name = "stranded . lol", Size = UDim2.new(0, 675, 0, 650), FadeSpeed = 0.25})
 
 local marketplace_service = game:GetService("MarketplaceService")
 
@@ -11942,7 +11942,7 @@ end)
 if success_place and place_info then
 	place_name = place_info.Name
 end
-local Watermark = Library:Watermark("Botrixa & ".. os.date("%b %d %Y") .. " & ".. place_name)
+local Watermark = Library:Watermark("Stranded ~ ".. os.date("%b %d %Y") .. " ~ ".. place_name)
 local KeybindList = Library:KeybindList()
 
 Watermark:SetVisibility(false)
@@ -14728,8 +14728,8 @@ do
 	end})
 	
 	ConfigsSection:Button({Name = "Create Config", Callback = function()
-		if not isfile(Workspace.Folders.Configs .. "/" .. ConfigName .. ".json") then
-			writefile(Workspace.Folders.Configs .. "/" .. ConfigName .. ".json", Workspace:GetConfig())
+		if not isfile(Library.Folders.Configs .. "/" .. ConfigName .. ".json") then
+			writefile(Library.Folders.Configs .. "/" .. ConfigName .. ".json", Library:GetConfig())
 			Library:RefreshConfigsList(ConfigsListbox)
 		else
 			Library:Notification("Config '" .. ConfigName .. ".json' already exists", 3, Color3.fromRGB(255, 0, 0))
@@ -14739,7 +14739,61 @@ do
 	
 	ConfigsSection:Button({Name = "Load Config", Callback = function()
 		if ConfigSelected then
-			Library:LoadConfig(readfile(Workspace.Folders.Configs .. "/" .. ConfigSelected))
+			-- =========================
+-- SAFE CONFIG LOADER
+-- =========================
+
+local function SafeLoadConfig(ConfigName)
+    -- تأكد الاسم موجود
+    if not ConfigName or ConfigName == "" then
+        warn("No config selected")
+        return
+    end
+
+    -- نظف الاسم لو فيه مسار مكرر
+    local cleanName = tostring(ConfigName):gsub(Library.Folders.Configs .. "/", "")
+
+    -- المسار النهائي
+    local path = Library.Folders.Configs .. "/" .. cleanName
+
+    print("Loading config from:", path)
+
+    -- تحقق الملف موجود
+    if not isfile(path) then
+        warn("Config file not found:", path)
+        return
+    end
+
+    -- انتظر لين الواجهة تجهز
+    local tries = 0
+    repeat
+        task.wait(0.5)
+        tries += 1
+    until (Library and Library.LoadConfig) or tries >= 10
+
+    if not Library or not Library.LoadConfig then
+        warn("Library not ready to load config")
+        return
+    end
+
+    -- قراءة الملف
+    local success, data = pcall(readfile, path)
+    if not success then
+        warn("Failed to read config file")
+        return
+    end
+
+    -- تحميل الكونفق بأمان
+    local loaded, err = pcall(function()
+        Library:LoadConfig(data)
+    end)
+
+    if loaded then
+        print("Config loaded successfully:", cleanName)
+    else
+        warn("Config load error:", err)
+    end
+end
 		end
 		
 		if esp and esp.funcs and esp.funcs.fix_corrupted_fog_values then
@@ -14816,7 +14870,7 @@ task.spawn(function()
 	end
 	end)
 	
-	Library:Notification("Botrixa . cc loaded successfully", 5, Library.Theme.Accent)
+	Library:Notification("stranded . lol loaded successfully", 5, Library.Theme.Accent)
 	end)
 end)
 
